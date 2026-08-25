@@ -1,0 +1,16 @@
+schema:
+  - internal/graph/schema/*.graphqls
+
+exec:
+  package: graph
+  layout: single-file
+  filename: internal/graph/generated.go
+
+model:
+  package: model
+  filename: internal/graph/model/models_gen.go
+
+resolver:
+  layout: follow-schema
+  dir: internal/graph
+  package: graph
