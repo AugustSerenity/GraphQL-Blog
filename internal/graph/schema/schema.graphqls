@@ -1,0 +1,64 @@
+type User {
+    id: ID!
+    posts: [Post!]!
+}
+
+type Post {
+    id: ID!
+    content: String!
+    author: User!
+    commentsEnabled: Boolean!
+}
+
+type Comment {
+    id: ID!
+    post: Post!
+    author: User!
+    content: String!
+    parent: Comment
+    children: [Comment!]!
+}
+
+type CommentConnection {
+    items: [Comment!]!
+    pageInfo: PageInfo!
+}
+
+type PageInfo {
+    hasNextPage: Boolean!
+    endCursor: String
+}
+
+input CommentsPagination {
+    limit: Int = 5
+    cursor: String
+}
+
+type Query {
+    posts: [Post!]!
+    post(id: ID!): Post
+    comments(
+        postId: ID!
+        pagination: CommentsPagination
+    ): CommentConnection!
+}
+
+input CreatePostInput {
+    content: String!
+}
+
+input CreateCommentInput {
+    postId: ID!
+    parentId: ID
+    content: String!
+}
+
+type Mutation {
+    createPost(input: CreatePostInput!): Post!
+    createComment(input: CreateCommentInput!): Comment!
+    setCommentsEnabled(postId: ID!, enabled: Boolean!): Post!
+}
+
+type Subscription {
+    commentAdded(postId: ID!): Comment!
+}
