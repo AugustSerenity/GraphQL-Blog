@@ -1,2 +1,3 @@
-# -Graph-Blog
- GraphBlog
+# Graph-Blog
+
+### [Задание](./docs/task.docx)
