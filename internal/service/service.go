@@ -149,3 +149,24 @@ func (s *Service) GetComments(
 		Cursor: cursor,
 	})
 }
+
+func (s *Service) GetComment(
+	ctx context.Context,
+	id string,
+) (*model.Comment, error) {
+	return s.repo.GetComment(ctx, id)
+}
+
+func (s *Service) GetCommentChildren(
+	ctx context.Context,
+	parentID string,
+) ([]*model.Comment, error) {
+	return s.repo.GetCommentChildren(ctx, parentID)
+}
+
+func (s *Service) GetCommentsChildren(
+	ctx context.Context,
+	parentIDs []string,
+) (map[string][]*model.Comment, error) {
+	return s.repo.GetCommentsChildren(ctx, parentIDs)
+}

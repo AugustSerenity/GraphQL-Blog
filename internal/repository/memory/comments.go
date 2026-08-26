@@ -112,3 +112,45 @@ func (r *Repository) GetComments(
 		EndCursor:   endCursor,
 	}, nil
 }
+
+func (r *Repository) GetCommentChildren(
+	ctx context.Context,
+	parentID string,
+) ([]*model.Comment, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	ids := r.commentsByParent[parentID]
+
+	result := make([]*model.Comment, 0, len(ids))
+
+	for _, id := range ids {
+		result = append(result, r.comments[id])
+	}
+
+	return result, nil
+}
+
+func (r *Repository) GetCommentsChildren(
+	ctx context.Context,
+	parentIDs []string,
+) (map[string][]*model.Comment, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	result := make(map[string][]*model.Comment, len(parentIDs))
+
+	for _, parentID := range parentIDs {
+		ids := r.commentsByParent[parentID]
+
+		children := make([]*model.Comment, 0, len(ids))
+
+		for _, id := range ids {
+			children = append(children, r.comments[id])
+		}
+
+		result[parentID] = children
+	}
+
+	return result, nil
+}

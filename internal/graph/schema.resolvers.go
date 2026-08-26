@@ -113,10 +113,30 @@ func (r *queryResolver) Comments(
 		return nil, err
 	}
 
+	parentIDs := make([]string, 0, len(page.Items))
+
+	for _, comment := range page.Items {
+		parentIDs = append(parentIDs, comment.ID)
+	}
+
+	children, err := r.Service.GetCommentsChildren(ctx, parentIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	items := make([]*model.Comment, 0, len(page.Items))
 
 	for _, comment := range page.Items {
-		items = append(items, commentToGraphQL(comment))
+		item := commentToGraphQL(comment)
+
+		for _, child := range children[comment.ID] {
+			item.Children = append(
+				item.Children,
+				commentToGraphQL(child),
+			)
+		}
+
+		items = append(items, item)
 	}
 
 	return &model.CommentConnection{

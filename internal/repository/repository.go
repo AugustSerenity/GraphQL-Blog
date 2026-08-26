@@ -23,6 +23,8 @@ type CommentRepository interface {
 	CreateComment(ctx context.Context, comment *model.Comment) error
 	GetComment(ctx context.Context, id string) (*model.Comment, error)
 	GetComments(ctx context.Context, params CommentListParams) (*CommentPage, error)
+	GetCommentChildren(ctx context.Context, parentID string) ([]*model.Comment, error)
+	GetCommentsChildren(ctx context.Context, parentIDs []string) (map[string][]*model.Comment, error)
 }
 
 type UserRepository interface {

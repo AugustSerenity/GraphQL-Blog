@@ -22,18 +22,16 @@ func commentToGraphQL(comment *domain.Comment) *model.Comment {
 		return nil
 	}
 
-	return &model.Comment{
+	result := &model.Comment{
 		ID:      comment.ID,
 		Content: comment.Content,
 	}
-}
 
-func userToGraphQL(user *domain.User) *model.User {
-	if user == nil {
-		return nil
+	if comment.ParentID != nil {
+		result.Parent = &model.Comment{
+			ID: *comment.ParentID,
+		}
 	}
 
-	return &model.User{
-		ID: user.ID,
-	}
+	return result
 }
