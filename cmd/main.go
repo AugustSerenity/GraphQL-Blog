@@ -10,7 +10,9 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 
 	"github.com/AugustSerenity/GraphQL-Blog/internal/graph"
+	"github.com/AugustSerenity/GraphQL-Blog/internal/repository"
 	"github.com/AugustSerenity/GraphQL-Blog/internal/repository/memory"
+	"github.com/AugustSerenity/GraphQL-Blog/internal/repository/postgres"
 	"github.com/AugustSerenity/GraphQL-Blog/internal/service"
 )
 
@@ -26,7 +28,9 @@ func main() {
 
 	slog.SetDefault(logger)
 
-	repo := memory.New()
+	repo, closeRepo := createRepository(logger)
+	defer closeRepo()
+
 	svc := service.NewService(repo)
 
 	resolver := &graph.Resolver{
@@ -56,5 +60,50 @@ func main() {
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)
+	}
+}
+
+func createRepository(logger *slog.Logger) (repository.Repository, func()) {
+	repositoryType := os.Getenv("REPOSITORY_TYPE")
+
+	switch repositoryType {
+	case "", "inmemory":
+		logger.Info("using inmemory repository")
+
+		repo := memory.New()
+
+		return repo, func() {}
+
+	case "postgres":
+		databaseURL := os.Getenv("DATABASE_URL")
+
+		if databaseURL == "" {
+			logger.Error("DATABASE_URL is required when REPOSITORY=postgres")
+			os.Exit(1)
+		}
+
+		db, err := postgres.InitDB(databaseURL, logger)
+		if err != nil {
+			logger.Error("failed to initialize postgres", "error", err)
+			os.Exit(1)
+		}
+
+		repo := postgres.New(db)
+
+		return repo, func() {
+			postgres.CloseDB(db, logger)
+		}
+
+	default:
+		logger.Error(
+			"unknown repository type",
+			"repository",
+			repositoryType,
+			"allowed",
+			"memory, postgres",
+		)
+		os.Exit(1)
+
+		return nil, nil
 	}
 }

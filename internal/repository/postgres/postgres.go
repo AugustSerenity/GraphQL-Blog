@@ -4,8 +4,21 @@ import (
 	"database/sql"
 	"log/slog"
 
+	"github.com/AugustSerenity/GraphQL-Blog/internal/repository"
 	_ "github.com/lib/pq"
 )
+
+var _ repository.Repository = (*Repository)(nil)
+
+type Repository struct {
+	db *sql.DB
+}
+
+func New(db *sql.DB) *Repository {
+	return &Repository{
+		db: db,
+	}
+}
 
 func InitDB(databaseURL string, log *slog.Logger) (*sql.DB, error) {
 	var err error
