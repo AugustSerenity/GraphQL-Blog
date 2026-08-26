@@ -181,7 +181,7 @@ func (r *subscriptionResolver) CommentAdded(
 	fmt.Println("postID:", postID)
 	fmt.Println("========================================")
 
-	events, cancel, err := r.Service.SubscribeComments(ctx, postID)
+	events, cancel, err := r.Service.SubscribeComments(postID)
 	if err != nil {
 		fmt.Println("=== SUBSCRIBE ERROR ===")
 		fmt.Println("postID:", postID)
@@ -208,6 +208,10 @@ func (r *subscriptionResolver) CommentAdded(
 				fmt.Println("postID:", postID)
 
 				cancel()
+
+				fmt.Println("=== CANCEL SUBSCRIPTION ===")
+				fmt.Println("postID:", postID)
+
 				return
 
 			case comment, ok := <-events:
@@ -228,8 +232,6 @@ func (r *subscriptionResolver) CommentAdded(
 					fmt.Println("commentID:", comment.ID)
 
 				case <-ctx.Done():
-					fmt.Println("=== CONTEXT DONE WHILE SENDING EVENT ===")
-					cancel()
 					return
 				}
 			}
