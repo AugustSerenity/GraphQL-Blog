@@ -1,7 +1,15 @@
 package service
 
-type Service struct{}
+type PostSaver interface {
+	SavePost()
+}
 
-func NewService() *Service {
-	return &Service{}
+type Service struct {
+	ps PostSaver
+}
+
+func NewService(ps PostSaver) *Service {
+	return &Service{
+		ps: ps,
+	}
 }

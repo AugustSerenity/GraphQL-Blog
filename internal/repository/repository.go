@@ -11,3 +11,5 @@ func NewRepository(db *sql.DB) *Repository {
 		db: db,
 	}
 }
+
+func (r *Repository) SavePost() {}
