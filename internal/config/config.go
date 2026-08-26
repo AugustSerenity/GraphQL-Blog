@@ -9,7 +9,7 @@ type Config struct {
 
 func Load() Config {
 	return Config{
-		DatabaseURL:    getEnv(os.Getenv("DB_URL"), ""),
+		DatabaseURL:    getEnv(os.Getenv("DATABASE_URL"), ""),
 		RepositoryType: getEnv(os.Getenv("REPOSITORY_TYPE"), ""),
 	}
 }

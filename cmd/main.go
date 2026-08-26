@@ -9,6 +9,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 
+	"github.com/AugustSerenity/GraphQL-Blog/internal/config"
 	"github.com/AugustSerenity/GraphQL-Blog/internal/graph"
 	"github.com/AugustSerenity/GraphQL-Blog/internal/repository"
 	"github.com/AugustSerenity/GraphQL-Blog/internal/repository/memory"
@@ -28,7 +29,9 @@ func main() {
 
 	slog.SetDefault(logger)
 
-	repo, closeRepo := createRepository(logger)
+	cfg := config.Load()
+
+	repo, closeRepo := createRepository(cfg.RepositoryType, cfg.DatabaseURL, logger)
 	defer closeRepo()
 
 	svc := service.NewService(repo)
@@ -63,9 +66,7 @@ func main() {
 	}
 }
 
-func createRepository(logger *slog.Logger) (repository.Repository, func()) {
-	repositoryType := os.Getenv("REPOSITORY_TYPE")
-
+func createRepository(repositoryType, databaseURL string, logger *slog.Logger) (repository.Repository, func()) {
 	switch repositoryType {
 	case "", "inmemory":
 		logger.Info("using inmemory repository")
@@ -75,10 +76,8 @@ func createRepository(logger *slog.Logger) (repository.Repository, func()) {
 		return repo, func() {}
 
 	case "postgres":
-		databaseURL := os.Getenv("DATABASE_URL")
-
 		if databaseURL == "" {
-			logger.Error("DATABASE_URL is required when REPOSITORY=postgres")
+			logger.Error("DATABASE_URL is required when REPOSITORY_TYPE=postgres")
 			os.Exit(1)
 		}
 

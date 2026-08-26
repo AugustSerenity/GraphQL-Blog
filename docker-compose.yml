@@ -1,17 +1,15 @@
-version: "3.8"
-
 services:
   postgres-service:
     image: postgres:16-alpine
     container_name: postgres_db
 
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${graphBlog}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: graphBlog
 
     ports:
-      - "5432:5432"
+      - "5433:5432"
 
     volumes:
       - ./migration/001_create_users.up.sql:/docker-entrypoint-initdb.d/001_create_users.sql
@@ -23,6 +21,7 @@ services:
     container_name: graphql_blog_app
 
     environment:
+      REPOSITORY_TYPE: ${REPOSITORY_TYPE:-memory}
       DATABASE_URL: ${DATABASE_URL}
 
     ports:
