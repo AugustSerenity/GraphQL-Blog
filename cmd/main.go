@@ -4,8 +4,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/transport"
 
 	"github.com/AugustSerenity/GraphQL-Blog/internal/graph"
 	"github.com/AugustSerenity/GraphQL-Blog/internal/repository/memory"
@@ -13,20 +15,16 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
+	logger := slog.New(
+		slog.NewTextHandler(
+			os.Stdout,
+			&slog.HandlerOptions{
+				Level: slog.LevelDebug,
+			},
+		),
+	)
 
 	slog.SetDefault(logger)
-
-	// cfg := config.Load()
-
-	// db, err := postgres.InitDB(cfg.DatabaseURL, logger)
-	// if err != nil {
-	// 	logger.Error("failed to initialize database", "error", err)
-	// 	os.Exit(1)
-	// }
-	// defer postgres.CloseDB(db, logger)
 
 	repo := memory.New()
 	svc := service.NewService(repo)
@@ -35,13 +33,21 @@ func main() {
 		Service: svc,
 	}
 
-	srv := handler.NewDefaultServer(
+	srv := handler.New(
 		graph.NewExecutableSchema(
 			graph.Config{
 				Resolvers: resolver,
 			},
 		),
 	)
+
+	srv.AddTransport(transport.Websocket{
+		KeepAlivePingInterval: 5 * time.Second,
+	})
+
+	srv.AddTransport(transport.Options{})
+	srv.AddTransport(transport.GET{})
+	srv.AddTransport(transport.POST{})
 
 	http.Handle("/query", srv)
 

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -14,12 +15,14 @@ import (
 const MaxCommentLength = 2000
 
 type Service struct {
-	repo repository.Repository
+	repo   repository.Repository
+	broker *CommentBroker
 }
 
 func NewService(repo repository.Repository) *Service {
 	return &Service{
-		repo: repo,
+		repo:   repo,
+		broker: NewCommentBroker(),
 	}
 }
 
@@ -54,28 +57,49 @@ func (s *Service) CreateComment(
 	parentID *string,
 	content string,
 ) (*model.Comment, error) {
+	fmt.Println("========================================")
+	fmt.Println("=== CREATE COMMENT SERVICE START ===")
+	fmt.Println("postID:", postID)
+	fmt.Println("content:", content)
+
 	content = strings.TrimSpace(content)
 
 	if content == "" {
+		fmt.Println("=== INVALID CONTENT ===")
 		return nil, ErrInvalidContent
 	}
 
 	if len([]rune(content)) > MaxCommentLength {
+		fmt.Println("=== COMMENT TOO LONG ===")
 		return nil, ErrCommentTooLong
 	}
 
+	fmt.Println("=== GET POST ===")
+
 	post, err := s.repo.GetPost(ctx, postID)
 	if err != nil {
+		fmt.Println("=== GET POST ERROR ===")
+		fmt.Println("error:", err)
 		return nil, err
 	}
 
+	fmt.Println("=== POST FOUND ===")
+	fmt.Println("postID:", post.ID)
+	fmt.Println("commentsEnabled:", post.CommentsEnabled)
+
 	if !post.CommentsEnabled {
+		fmt.Println("=== COMMENTS DISABLED ===")
 		return nil, ErrCommentsDisabled
 	}
 
 	if parentID != nil {
+		fmt.Println("=== GET PARENT COMMENT ===")
+		fmt.Println("parentID:", *parentID)
+
 		parent, err := s.repo.GetComment(ctx, *parentID)
 		if err != nil {
+			fmt.Println("=== GET PARENT COMMENT ERROR ===")
+			fmt.Println("error:", err)
 			return nil, err
 		}
 
@@ -93,9 +117,33 @@ func (s *Service) CreateComment(
 		CreatedAt: time.Now(),
 	}
 
+	fmt.Println("=== COMMENT CREATED IN MEMORY ===")
+	fmt.Println("commentID:", comment.ID)
+
+	fmt.Println("=== BEFORE REPO CREATE COMMENT ===")
+
 	if err := s.repo.CreateComment(ctx, comment); err != nil {
+		fmt.Println("=== REPO CREATE COMMENT ERROR ===")
+		fmt.Println("error:", err)
 		return nil, err
 	}
+
+	fmt.Println("=== COMMENT SAVED TO REPO ===")
+	fmt.Println("commentID:", comment.ID)
+	fmt.Println("postID:", comment.PostID)
+
+	fmt.Println("=== BEFORE BROKER PUBLISH ===")
+	fmt.Println("postID:", postID)
+	fmt.Println("commentID:", comment.ID)
+
+	s.broker.Publish(postID, comment)
+
+	fmt.Println("=== AFTER BROKER PUBLISH ===")
+	fmt.Println("postID:", postID)
+	fmt.Println("commentID:", comment.ID)
+
+	fmt.Println("=== CREATE COMMENT SERVICE END ===")
+	fmt.Println("========================================")
 
 	return comment, nil
 }
@@ -169,4 +217,26 @@ func (s *Service) GetCommentsChildren(
 	parentIDs []string,
 ) (map[string][]*model.Comment, error) {
 	return s.repo.GetCommentsChildren(ctx, parentIDs)
+}
+
+func (s *Service) SubscribeComments(
+	postID string,
+) (<-chan *model.Comment, func()) {
+	fmt.Println("========================================")
+	fmt.Println("=== SERVICE SUBSCRIBE COMMENTS ===")
+	fmt.Println("postID:", postID)
+
+	ch := s.broker.Subscribe(postID)
+
+	fmt.Println("=== SERVICE SUBSCRIBE COMMENTS DONE ===")
+	fmt.Println("postID:", postID)
+
+	cancel := func() {
+		fmt.Println("=== CANCEL SUBSCRIPTION ===")
+		fmt.Println("postID:", postID)
+
+		s.broker.Unsubscribe(postID, ch)
+	}
+
+	return ch, cancel
 }
