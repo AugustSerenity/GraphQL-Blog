@@ -45,7 +45,17 @@ func (r *mutationResolver) SetCommentsEnabled(
 	postID string,
 	enabled bool,
 ) (*model.Post, error) {
-	return nil, nil
+	post, err := r.Service.SetCommentsEnabled(
+		ctx,
+		"user-1",
+		postID,
+		enabled,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return postToGraphQL(post), nil
 }
 
 func (r *queryResolver) Posts(
@@ -82,7 +92,40 @@ func (r *queryResolver) Comments(
 	postID string,
 	pagination *model.CommentsPagination,
 ) (*model.CommentConnection, error) {
-	return nil, nil
+	var limit int
+	var cursor *string
+
+	if pagination != nil {
+		if pagination.Limit != nil {
+			limit = *pagination.Limit
+		}
+
+		cursor = pagination.Cursor
+	}
+
+	page, err := r.Service.GetComments(
+		ctx,
+		postID,
+		limit,
+		cursor,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]*model.Comment, 0, len(page.Items))
+
+	for _, comment := range page.Items {
+		items = append(items, commentToGraphQL(comment))
+	}
+
+	return &model.CommentConnection{
+		Items: items,
+		PageInfo: &model.PageInfo{
+			HasNextPage: page.HasNextPage,
+			EndCursor:   page.EndCursor,
+		},
+	}, nil
 }
 
 func (r *subscriptionResolver) CommentAdded(

@@ -136,3 +136,16 @@ func (s *Service) GetPost(
 ) (*model.Post, error) {
 	return s.repo.GetPost(ctx, id)
 }
+
+func (s *Service) GetComments(
+	ctx context.Context,
+	postID string,
+	limit int,
+	cursor *string,
+) (*repository.CommentPage, error) {
+	return s.repo.GetComments(ctx, repository.CommentListParams{
+		PostID: postID,
+		Limit:  limit,
+		Cursor: cursor,
+	})
+}
