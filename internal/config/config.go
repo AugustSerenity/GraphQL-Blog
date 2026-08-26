@@ -3,12 +3,12 @@ package config
 import "os"
 
 type Config struct {
-	DBPath string
+	DatabaseURL string
 }
 
 func Load() Config {
 	return Config{
-		DBPath: getEnv(os.Getenv("DB_PATH"), "host=localhost port=5432 user=postgres dbname=graphBlog password=postgres"),
+		DatabaseURL: getEnv(os.Getenv("DB_URL"), "host=localhost port=5432 user=postgres dbname=graphBlog password=postgres"),
 	}
 }
 

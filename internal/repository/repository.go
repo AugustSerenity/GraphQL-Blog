@@ -1,15 +1,43 @@
 package repository
 
-import "database/sql"
+import (
+	"context"
 
-type Repository struct {
-	db *sql.DB
+	"github.com/AugustSerenity/GraphQL-Blog/internal/model"
+)
+
+type Repository interface {
+	PostRepository
+	CommentRepository
+	UserRepository
 }
 
-func NewRepository(db *sql.DB) *Repository {
-	return &Repository{
-		db: db,
-	}
+type PostRepository interface {
+	CreatePost(ctx context.Context, post *model.Post) error
+	GetPost(ctx context.Context, id string) (*model.Post, error)
+	ListPosts(ctx context.Context) ([]*model.Post, error)
+	SetCommentsEnabled(ctx context.Context, postID string, enabled bool) error
 }
 
-func (r *Repository) SavePost() {}
+type CommentRepository interface {
+	CreateComment(ctx context.Context, comment *model.Comment) error
+	GetComment(ctx context.Context, id string) (*model.Comment, error)
+	GetComments(ctx context.Context, params CommentListParams) (*CommentPage, error)
+}
+
+type UserRepository interface {
+	GetUser(ctx context.Context, id string) (*model.User, error)
+}
+
+type CommentListParams struct {
+	PostID   string
+	ParentID *string
+	Limit    int
+	Cursor   *string
+}
+
+type CommentPage struct {
+	Items       []*model.Comment
+	HasNextPage bool
+	EndCursor   *string
+}
