@@ -181,19 +181,17 @@ func (r *subscriptionResolver) CommentAdded(
 	fmt.Println("postID:", postID)
 	fmt.Println("========================================")
 
-	events, cancel := r.Service.SubscribeComments(postID)
+	events, cancel, err := r.Service.SubscribeComments(ctx, postID)
+	if err != nil {
+		fmt.Println("=== SUBSCRIBE ERROR ===")
+		fmt.Println("postID:", postID)
+		fmt.Println("error:", err)
+
+		return nil, err
+	}
 
 	fmt.Println("=== SUBSCRIBED TO COMMENT BROKER ===")
 	fmt.Println("postID:", postID)
-
-	go func() {
-		<-ctx.Done()
-
-		fmt.Println("=== SUBSCRIPTION CONTEXT DONE ===")
-		fmt.Println("postID:", postID)
-
-		cancel()
-	}()
 
 	result := make(chan *model.Comment)
 
@@ -203,25 +201,39 @@ func (r *subscriptionResolver) CommentAdded(
 		fmt.Println("=== SUBSCRIPTION EVENT LOOP STARTED ===")
 		fmt.Println("postID:", postID)
 
-		for comment := range events {
-			fmt.Println("=== EVENT RECEIVED BY RESOLVER ===")
-			fmt.Println("commentID:", comment.ID)
-			fmt.Println("postID:", comment.PostID)
-			fmt.Println("content:", comment.Content)
-
+		for {
 			select {
-			case result <- commentToGraphQL(comment):
-				fmt.Println("=== EVENT SENT TO GRAPHQL ===")
-				fmt.Println("commentID:", comment.ID)
-
 			case <-ctx.Done():
-				fmt.Println("=== CONTEXT DONE WHILE SENDING EVENT ===")
+				fmt.Println("=== SUBSCRIPTION CONTEXT DONE ===")
+				fmt.Println("postID:", postID)
+
+				cancel()
 				return
+
+			case comment, ok := <-events:
+				if !ok {
+					fmt.Println("=== SUBSCRIPTION EVENT CHANNEL CLOSED ===")
+					fmt.Println("postID:", postID)
+					return
+				}
+
+				fmt.Println("=== EVENT RECEIVED BY RESOLVER ===")
+				fmt.Println("commentID:", comment.ID)
+				fmt.Println("postID:", comment.PostID)
+				fmt.Println("content:", comment.Content)
+
+				select {
+				case result <- commentToGraphQL(comment):
+					fmt.Println("=== EVENT SENT TO GRAPHQL ===")
+					fmt.Println("commentID:", comment.ID)
+
+				case <-ctx.Done():
+					fmt.Println("=== CONTEXT DONE WHILE SENDING EVENT ===")
+					cancel()
+					return
+				}
 			}
 		}
-
-		fmt.Println("=== SUBSCRIPTION EVENT CHANNEL CLOSED ===")
-		fmt.Println("postID:", postID)
 	}()
 
 	return result, nil

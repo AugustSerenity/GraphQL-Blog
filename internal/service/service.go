@@ -220,16 +220,21 @@ func (s *Service) GetCommentsChildren(
 }
 
 func (s *Service) SubscribeComments(
+	ctx context.Context,
 	postID string,
-) (<-chan *model.Comment, func()) {
+) (<-chan *model.Comment, func(), error) {
 	fmt.Println("========================================")
 	fmt.Println("=== SERVICE SUBSCRIBE COMMENTS ===")
 	fmt.Println("postID:", postID)
 
-	ch := s.broker.Subscribe(postID)
+	_, err := s.repo.GetPost(ctx, postID)
+	if err != nil {
+		fmt.Println("=== SUBSCRIBE POST NOT FOUND ===")
+		fmt.Println("postID:", postID)
+		return nil, nil, err
+	}
 
-	fmt.Println("=== SERVICE SUBSCRIBE COMMENTS DONE ===")
-	fmt.Println("postID:", postID)
+	ch := s.broker.Subscribe(postID)
 
 	cancel := func() {
 		fmt.Println("=== CANCEL SUBSCRIPTION ===")
@@ -238,5 +243,8 @@ func (s *Service) SubscribeComments(
 		s.broker.Unsubscribe(postID, ch)
 	}
 
-	return ch, cancel
+	fmt.Println("=== SERVICE SUBSCRIBE COMMENTS DONE ===")
+	fmt.Println("postID:", postID)
+
+	return ch, cancel, nil
 }
