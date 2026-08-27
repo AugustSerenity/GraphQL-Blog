@@ -10,7 +10,7 @@ vet:
 lint:
 	golangci-lint run ./...
 
-check: vet lint
+check: vet lint test
 
 test:
 	go test ./...

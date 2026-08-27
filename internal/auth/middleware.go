@@ -2,11 +2,16 @@ package auth
 
 import "net/http"
 
-const testUserID = "user-1"
-
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := WithUserID(r.Context(), testUserID)
+		userID := r.Header.Get("X-User-ID")
+
+		if userID == "" {
+			http.Error(w, "user is not authenticated", http.StatusUnauthorized)
+			return
+		}
+
+		ctx := WithUserID(r.Context(), userID)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
