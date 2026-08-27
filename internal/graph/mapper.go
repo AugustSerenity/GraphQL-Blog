@@ -14,6 +14,9 @@ func postToGraphQL(post *domain.Post) *model.Post {
 		ID:              post.ID,
 		Content:         post.Content,
 		CommentsEnabled: post.CommentsEnabled,
+		Author: &model.User{
+			ID: post.AuthorID,
+		},
 	}
 }
 
@@ -25,6 +28,12 @@ func commentToGraphQL(comment *domain.Comment) *model.Comment {
 	result := &model.Comment{
 		ID:      comment.ID,
 		Content: comment.Content,
+		Post: &model.Post{
+			ID: comment.PostID,
+		},
+		Author: &model.User{
+			ID: comment.AuthorID,
+		},
 	}
 
 	if comment.ParentID != nil {

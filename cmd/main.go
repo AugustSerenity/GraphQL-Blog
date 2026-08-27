@@ -9,6 +9,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 
+	"github.com/AugustSerenity/GraphQL-Blog/internal/auth"
 	"github.com/AugustSerenity/GraphQL-Blog/internal/config"
 	"github.com/AugustSerenity/GraphQL-Blog/internal/graph"
 	"github.com/AugustSerenity/GraphQL-Blog/internal/repository"
@@ -56,7 +57,7 @@ func main() {
 	srv.AddTransport(transport.GET{})
 	srv.AddTransport(transport.POST{})
 
-	http.Handle("/query", srv)
+	http.Handle("/query", auth.Middleware(srv))
 
 	logger.Info("server started", "address", ":8080")
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/AugustSerenity/GraphQL-Blog/internal/auth"
 	"github.com/AugustSerenity/GraphQL-Blog/internal/graph/model"
 )
 
@@ -11,22 +12,19 @@ func (r *mutationResolver) CreatePost(
 	ctx context.Context,
 	input model.CreatePostInput,
 ) (*model.Post, error) {
-	fmt.Println("=== CREATE POST RESOLVER CALLED ===")
-	fmt.Println("content:", input.Content)
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("user is not authenticated")
+	}
 
 	post, err := r.Service.CreatePost(
 		ctx,
-		"user-1",
+		userID,
 		input.Content,
 	)
 	if err != nil {
-		fmt.Println("=== CREATE POST ERROR ===", err)
 		return nil, err
 	}
-
-	fmt.Println("=== POST CREATED ===")
-	fmt.Println("postID:", post.ID)
-	fmt.Println("authorID:", post.AuthorID)
 
 	return postToGraphQL(post), nil
 }
@@ -35,26 +33,21 @@ func (r *mutationResolver) CreateComment(
 	ctx context.Context,
 	input model.CreateCommentInput,
 ) (*model.Comment, error) {
-	fmt.Println("=== CREATE COMMENT RESOLVER CALLED ===")
-	fmt.Println("postID:", input.PostID)
-	fmt.Println("content:", input.Content)
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("user is not authenticated")
+	}
 
 	comment, err := r.Service.CreateComment(
 		ctx,
-		"user-1",
+		userID,
 		input.PostID,
 		input.ParentID,
 		input.Content,
 	)
 	if err != nil {
-		fmt.Println("=== CREATE COMMENT ERROR ===", err)
 		return nil, err
 	}
-
-	fmt.Println("=== COMMENT CREATED ===")
-	fmt.Println("commentID:", comment.ID)
-	fmt.Println("postID:", comment.PostID)
-	fmt.Println("authorID:", comment.AuthorID)
 
 	return commentToGraphQL(comment), nil
 }
@@ -64,18 +57,18 @@ func (r *mutationResolver) SetCommentsEnabled(
 	postID string,
 	enabled bool,
 ) (*model.Post, error) {
-	fmt.Println("=== SET COMMENTS ENABLED ===")
-	fmt.Println("postID:", postID)
-	fmt.Println("enabled:", enabled)
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("user is not authenticated")
+	}
 
 	post, err := r.Service.SetCommentsEnabled(
 		ctx,
-		"user-1",
+		userID,
 		postID,
 		enabled,
 	)
 	if err != nil {
-		fmt.Println("=== SET COMMENTS ERROR ===", err)
 		return nil, err
 	}
 
@@ -176,62 +169,31 @@ func (r *subscriptionResolver) CommentAdded(
 	ctx context.Context,
 	postID string,
 ) (<-chan *model.Comment, error) {
-	fmt.Println("========================================")
-	fmt.Println("=== COMMENT ADDED RESOLVER CALLED ===")
-	fmt.Println("postID:", postID)
-	fmt.Println("========================================")
-
 	events, cancel, err := r.Service.SubscribeComments(postID)
 	if err != nil {
-		fmt.Println("=== SUBSCRIBE ERROR ===")
-		fmt.Println("postID:", postID)
-		fmt.Println("error:", err)
-
 		return nil, err
 	}
-
-	fmt.Println("=== SUBSCRIBED TO COMMENT BROKER ===")
-	fmt.Println("postID:", postID)
 
 	result := make(chan *model.Comment)
 
 	go func() {
 		defer close(result)
 
-		fmt.Println("=== SUBSCRIPTION EVENT LOOP STARTED ===")
-		fmt.Println("postID:", postID)
-
 		for {
 			select {
 			case <-ctx.Done():
-				fmt.Println("=== SUBSCRIPTION CONTEXT DONE ===")
-				fmt.Println("postID:", postID)
-
 				cancel()
-
-				fmt.Println("=== CANCEL SUBSCRIPTION ===")
-				fmt.Println("postID:", postID)
-
 				return
 
 			case comment, ok := <-events:
 				if !ok {
-					fmt.Println("=== SUBSCRIPTION EVENT CHANNEL CLOSED ===")
-					fmt.Println("postID:", postID)
 					return
 				}
 
-				fmt.Println("=== EVENT RECEIVED BY RESOLVER ===")
-				fmt.Println("commentID:", comment.ID)
-				fmt.Println("postID:", comment.PostID)
-				fmt.Println("content:", comment.Content)
-
 				select {
 				case result <- commentToGraphQL(comment):
-					fmt.Println("=== EVENT SENT TO GRAPHQL ===")
-					fmt.Println("commentID:", comment.ID)
-
 				case <-ctx.Done():
+					cancel()
 					return
 				}
 			}
